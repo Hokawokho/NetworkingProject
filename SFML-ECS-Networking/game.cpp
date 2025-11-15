@@ -27,12 +27,7 @@ void Game::HandleEvents(const std::optional<sf::Event> event)
 	// Handle key press events passed from window..
 	if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
 		if (keyPressed->scancode == sf::Keyboard::Scancode::W) {
-			tanks.at(0)->isMoving.forward = true;
-			tanks.at(0)->isMoving.backward = false;
-		}
-		else if (keyPressed->scancode == sf::Keyboard::Scancode::S) {
-			tanks.at(0)->isMoving.forward = false;
-			tanks.at(0)->isMoving.backward = true;
+			tanks.at(0)->isMoving.push = true;
 		}
 		if (keyPressed->scancode == sf::Keyboard::Scancode::A) {
 			tanks.at(0)->isMoving.left = true;
@@ -42,28 +37,40 @@ void Game::HandleEvents(const std::optional<sf::Event> event)
 			tanks.at(0)->isMoving.left = false;
 			tanks.at(0)->isMoving.right = true;
 		}
-		if (keyPressed->scancode == sf::Keyboard::Scancode::D) {
 
-		}
+		// P2
+		if (keyPressed->scancode == sf::Keyboard::Scancode::J)
+			tanks.at(1)->isMoving.left = true;
+		if (keyPressed->scancode == sf::Keyboard::Scancode::L)
+			tanks.at(1)->isMoving.right = true;
+		if (keyPressed->scancode == sf::Keyboard::Scancode::I)
+			tanks.at(1)->isMoving.push = true;
 	}
 
 	// Handle key release events passed from window.
 	else if (const auto* keyReleased = event->getIf<sf::Event::KeyReleased>()) {
 		if (keyReleased->scancode == sf::Keyboard::Scancode::W)
-			tanks.at(0)->isMoving.forward = false;
-		if (keyReleased->scancode == sf::Keyboard::Scancode::S)
-			tanks.at(0)->isMoving.backward = false;
+			tanks.at(0)->isMoving.push = false;
 		if (keyReleased->scancode == sf::Keyboard::Scancode::A)
 			tanks.at(0)->isMoving.left = false;
 		if (keyReleased->scancode == sf::Keyboard::Scancode::D)
 			tanks.at(0)->isMoving.right = false;
+
+
+		// P2
+		if (keyReleased->scancode == sf::Keyboard::Scancode::J)
+			tanks.at(1)->isMoving.left = false;
+		if (keyReleased->scancode == sf::Keyboard::Scancode::L)
+			tanks.at(1)->isMoving.right = false;
+		if (keyReleased->scancode == sf::Keyboard::Scancode::I)
+			tanks.at(1)->isMoving.push = false;
 	}
 }
 
 void Game::Update(float dt)
 {
 	for (int i = 0; i < tanks.size(); i++) {
-		tanks.at(0)->Update(dt);
+		tanks.at(i)->Update(dt);
 	}
 }
 
@@ -86,10 +93,14 @@ void Game::Render(sf::RenderWindow& window)
 	}
 }
 
-void Game::AddTank(std::string body_tex, std::string barrel_tex, sf::Vector2f position)
+void Game::AddTank(std::string body_tex, std::string barrel_tex, sf::Vector2f position, sf::Angle initialAngle)
 {
 	std::unique_ptr<Tank> tank = std::make_unique<Tank>(Tank(textures[body_tex], textures[barrel_tex]));
 	tank->position = position;
+	tank->orbitCenter = tank->orbitCenter;
+	tank->orbitAngle = initialAngle;
+	tank->currentRadius = tank->orbitRadius;
+
 	tanks.push_back(std::move(tank));
 }
 

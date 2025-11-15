@@ -135,7 +135,8 @@ int main() {
 				// Add new tank with blue body and black barrel at the centre of the window.
 				// FIXME: Ideally we should wait until the first receive gets some data about the trank
 				// position and colour before we add it to the Observer's game.
-				game.AddTank("body_blue", "barrel_black", { 320, 240 });
+				game.AddTank("body_blue", "barrel_black", { 320, 240 }, sf::degrees(90));
+				game.AddTank("body_green", "barrel_black", { 320, 240 }, sf::degrees(270));
 			}
 
 			// Reset states before waiting to avoid stale Ready state causing a blocking receive.
@@ -240,7 +241,8 @@ int main() {
 					Utils::printMsg("Connected!", MessageType::success);
 					is_connected = true;
 					// Add new tank with blue body and black barrel at the centre of the window.
-					game.AddTank("body_blue", "barrel_black", { 320, 240 });
+					game.AddTank("body_blue", "barrel_black", { 320, 240 }, sf::degrees(90));
+					game.AddTank("body_green", "barrel_black", { 320, 240 }, sf::degrees(270));
 				}
 				else {
 					Utils::printMsg("Failed to connect to observer. Will try again later.", MessageType::warning);

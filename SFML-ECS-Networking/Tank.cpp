@@ -1,4 +1,4 @@
-#include "tank.h"
+ï»¿#include "tank.h"
 
 Tank::Tank(std::shared_ptr<sf::Texture> bodyTexture, std::shared_ptr<sf::Texture> barrelTexture)
 {
@@ -8,25 +8,23 @@ Tank::Tank(std::shared_ptr<sf::Texture> bodyTexture, std::shared_ptr<sf::Texture
 
 	// Set sprite origins. For body use the center of the texture. For barrel, hardcoded value.
 	body->setOrigin((sf::Vector2f)body->getTextureRect().getCenter());
-	barrel->setOrigin({ 6, 2 });
+	barrel->setOrigin({ 6, 2 });	
 
-	// With the correct offset on the barrel, we can just set barrel position = body position.
-	body->setPosition(position);
-	barrel->setPosition(body->getPosition());
+	currentRadius = orbitRadius;
 
-	// Posición inicial sobre la órbita a partir de orbitAngle-+-+-+-+-+-+
-	position = orbitCenter + sf::Vector2f(
+	sf::Vector2f radialDir = {
+
 		std::cos(orbitAngle.asRadians()),
 		std::sin(orbitAngle.asRadians())
-	) * orbitRadius;
+	};
 
+	position = orbitCenter + radialDir * currentRadius;
 	bodyRotation = orbitAngle + sf::degrees(90);
-
 
 	body->setPosition(position);
 	barrel->setPosition(position);
 
-	// Orientación inicial
+	// OrientaciÃ³n inicial
 	//bodyRotation = orbitAngle;
 	body->setRotation(bodyRotation);
 	barrel->setRotation(bodyRotation);
@@ -34,49 +32,66 @@ Tank::Tank(std::shared_ptr<sf::Texture> bodyTexture, std::shared_ptr<sf::Texture
 
 void Tank::Update(float dt)
 {
-	sf::Vector2f body_direction = {
-		/*std::cos((bodyRotation - sf::degrees(90)).asRadians()),
-		std::sin((bodyRotation - sf::degrees(90)).asRadians())*/
+	sf::Vector2f radialDir = {
 
+		std::cos(orbitAngle.asRadians()),
+		std::sin(orbitAngle.asRadians()) 
+	};
+
+	switch (movementState) {
+
+		case MovementState::Orbiting:
+			
+			if (isMoving.left) {
+				orbitAngle += sf::degrees(angularSpeed * dt);
+			}
+			if (isMoving.right) {
+				orbitAngle -= sf::degrees(angularSpeed * dt);
+				//position = orbitCenter + body_direction * currentRadius;
+			}
+			
+			// If pushing input detected, change to PushingIn state.
+			if (isMoving.push) {
+				movementState = MovementState::PushingIn;
+				//position = orbitCenter + body_direction * currentRadius;
+			}
+			break;
+
+
+		case MovementState::PushingIn:
+			currentRadius -= pushInSpeed * dt;
+			if (currentRadius <= minRadius) {
+
+				currentRadius = minRadius;
+				//position = orbitCenter + body_direction * currentRadius;
+				movementState = MovementState::ReturningOut;
+			}
+			break;
+
+		case MovementState::ReturningOut:
+			currentRadius += returnSpeed * dt;
+			if (currentRadius >= orbitRadius) {
+				//position = orbitCenter + body_direction * currentRadius;
+				currentRadius = orbitRadius;
+				movementState = MovementState::Orbiting;
+			}
+			break;
+
+
+	}
+
+
+	radialDir = {
 		std::cos(orbitAngle.asRadians() + sf::degrees(90).asRadians()),
 		std::sin(orbitAngle.asRadians() + sf::degrees(90).asRadians())
 	};
+	position = orbitCenter + radialDir * currentRadius;
 
-
-	// Update rotation angle based on input.
-	if (isMoving.left) {
-		//bodyRotation -= sf::degrees(rotationSpeed * dt);
-		orbitAngle -= sf::degrees(angularSpeed * dt);
-		position = orbitCenter + body_direction * orbitRadius;
-	}
-	else if (isMoving.right) {
-		//bodyRotation += sf::degrees(rotationSpeed * dt);
-		orbitAngle += sf::degrees(angularSpeed * dt);
-		position = orbitCenter + body_direction * orbitRadius;
-	}
-
-	//position = orbitCenter + sf::Vector2f(
-	//	std::cos(orbitAngle.asRadians()),
-	//	std::sin(orbitAngle.asRadians()))* orbitRadius;
-
-	
-	bodyRotation = orbitAngle;
-
-
-	// Calculate direction vector from angle of rotation.
-
-
-	// Update position based on input and direction.
-	if (isMoving.forward)
-		position -= body_direction * movementSpeed * dt;
-	else if (isMoving.backward)
-		position += body_direction * movementSpeed * dt;
-
+	// RotaciÃ³n tangente
+	bodyRotation = orbitAngle + sf::degrees(180);
 	// Apply new rotation to tank body and barrel.
 	body->setRotation(bodyRotation);
 	barrel->setRotation(bodyRotation);
-
-	// Apply new position to tank body and barrel.
 	body->setPosition(position);
 	barrel->setPosition(position);
 }

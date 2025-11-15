@@ -12,7 +12,7 @@ public:
 	// Network update now gets a collection of tank messages for multiple tanks.
 	void NetworkUpdate(float dt, TankMessage data);
 	void Render(sf::RenderWindow &window);
-	void AddTank(std::string body_tex, std::string barrel_tex, sf::Vector2f position);
+	void AddTank(std::string body_tex, std::string barrel_tex, sf::Vector2f position, sf::Angle initialAngle);
 	TankMessage GetNetworkUpdate();
 
 private:
