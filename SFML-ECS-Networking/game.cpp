@@ -1,4 +1,5 @@
-#include "game.h"
+﻿#include "game.h"
+#include "utils.h"
 
 Game::Game()
 {
@@ -21,6 +22,104 @@ void Game::LoadTextures() {
 	textures["barrel_green"] = std::make_shared<sf::Texture>("Assets/greenBarrel.png");
 	textures["body_green"] = std::make_shared<sf::Texture>("Assets/greenTank.png");
 }
+
+
+void Game::ResolveTankCollisions()
+{
+	for (std::size_t i = 0; i < tanks.size(); ++i)
+	{
+		for (std::size_t j = i + 1; j < tanks.size(); ++j)
+		{
+			auto& a = *tanks[i];
+			auto& b = *tanks[j];
+
+			sf::Vector2f ca = a.GetColliderCenter();
+			sf::Vector2f cb = b.GetColliderCenter();
+
+			sf::Vector2f diff = cb - ca;
+			float dist2 = diff.x * diff.x + diff.y * diff.y;
+
+			float ra = a.GetColliderRadius();
+			float rb = b.GetColliderRadius();
+			float minDist = ra + rb;
+			float minDist2 = minDist * minDist;
+
+			if (dist2 < minDist2)  // hay colisión
+			{
+				//Utils::printMsg("Colisión entre tanque " + std::to_string(i) + " y tanque " + std::to_string(j));
+
+				float dist = std::sqrt(dist2);
+				if (dist == 0.f)
+				{
+					// Están exactamente encima: fuerza una dirección arbitraria
+					diff = { 1.f, 0.f };
+					dist = 1.f;
+				}
+
+				sf::Vector2f normal = diff / dist;              // de A hacia B
+				float penetration = minDist - dist;             // lo que se solapan
+
+				// Caso 1: ambos orbitando -> se separan y se sincroniza la órbita
+				if (a.IsOrbiting() && b.IsOrbiting())
+				{
+					/*Utils::printMsg("Tanque VOLVIENDO SI QUE ENTRA");*/
+					sf::Vector2f correction = normal * (penetration / 2.f);
+					a.ApplyCollisionCorrection(-correction);
+					b.ApplyCollisionCorrection(correction);
+
+				}
+				else
+				{
+					// Si alguno está empujando hacia dentro, forzarlo a volver
+					/*if (a.GetMovementState() == Tank::MovementState::PushingIn) {
+						a.ForceReturnOut(); 
+						Utils::printMsg("Tanque VOLVIENDO SI QUE ENTRA 23232323");
+					
+					}
+					if (b.IsPushingIn()) b.ForceReturnOut();*/
+
+					if (a.GetMovementState() != Tank::MovementState::PushingIn && b.GetMovementState() == Tank::MovementState::PushingIn)
+					{
+						//b.ApplyCollisionCorrection(normal * penetration);
+						//b.ForceReturnOut();
+						Utils::printMsg("Tanque " + std::to_string(i) + " impactado. Vida restante: " + std::to_string(a.hits));
+						a.LowerHit();
+						b.ForceReturnOut();
+						a.ForceReturnOut();
+						// si B fuera a necesitar sincronizar órbita, hacerlo; si no, no hace daño
+						//if (b.IsOrbiting()) b.ForceReturnOut();
+					}
+					else if (a.GetMovementState() == Tank::MovementState::PushingIn && b.GetMovementState() != Tank::MovementState::PushingIn)
+					{
+						//a.ApplyCollisionCorrection(-normal * penetration);
+						//a.ForceReturnOut();
+						Utils::printMsg("Tanque " + std::to_string(j) + " impactado. Vida restante: " + std::to_string(b.hits));
+						b.LowerHit();
+						a.ForceReturnOut();
+						b.ForceReturnOut();
+						//if (a.IsOrbiting()) a.ForceReturnOut();
+					}
+					else if (a.GetMovementState() == Tank::MovementState::PushingIn && b.GetMovementState() == Tank::MovementState::PushingIn)
+					{
+						b.ForceReturnOut();
+						a.ForceReturnOut();
+					}
+					//else
+					//{
+					//	// Ninguno orbitando: comportamiento clásico (dividir corrección)
+					//	sf::Vector2f correction = normal * (penetration / 2.f);
+					//	Utils::printMsg("NO ESTA ENTRANDO A LOS ANTERIORES" + std::to_string(a.IsPushingIn()) + "  yyy  " + std::to_string(b.IsPushingIn()));
+					//	//a.ApplyCollisionCorrection(-correction);
+					//	//b.ApplyCollisionCorrection(correction);
+					//}
+
+				}
+			}
+		}
+	}
+}
+
+
 
 void Game::HandleEvents(const std::optional<sf::Event> event)
 {
@@ -72,7 +171,13 @@ void Game::Update(float dt)
 	for (int i = 0; i < tanks.size(); i++) {
 		tanks.at(i)->Update(dt);
 	}
+
+	ResolveTankCollisions();
 }
+
+
+
+
 
 // Tank data now includes player id for Observer to update multiple players.
 void Game::NetworkUpdate(float dt, TankMessage data) {

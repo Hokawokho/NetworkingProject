@@ -19,6 +19,8 @@ Tank::Tank(std::shared_ptr<sf::Texture> bodyTexture, std::shared_ptr<sf::Texture
 	};
 
 	position = orbitCenter + radialDir * currentRadius;
+	prevPosition = position;
+	
 	bodyRotation = orbitAngle + sf::degrees(90);
 
 	body->setPosition(position);
@@ -29,6 +31,8 @@ Tank::Tank(std::shared_ptr<sf::Texture> bodyTexture, std::shared_ptr<sf::Texture
 	body->setRotation(bodyRotation);
 	barrel->setRotation(bodyRotation);
 }
+
+
 
 void Tank::Update(float dt)
 {
@@ -43,15 +47,18 @@ void Tank::Update(float dt)
 		case MovementState::Orbiting:
 			
 			if (isMoving.left) {
+				prevPosition = position;
 				orbitAngle += sf::degrees(angularSpeed * dt);
 			}
 			if (isMoving.right) {
+				prevPosition = position;
 				orbitAngle -= sf::degrees(angularSpeed * dt);
 				//position = orbitCenter + body_direction * currentRadius;
 			}
 			
 			// If pushing input detected, change to PushingIn state.
 			if (isMoving.push) {
+				prevPosition = position;
 				movementState = MovementState::PushingIn;
 				//position = orbitCenter + body_direction * currentRadius;
 			}
@@ -69,11 +76,34 @@ void Tank::Update(float dt)
 			break;
 
 		case MovementState::ReturningOut:
+			sf::Vector2f toTank = prevPosition - orbitCenter;
+			float angleRad = std::atan2(toTank.y, toTank.x);
+			orbitAngle = sf::radians(angleRad);
 			currentRadius += returnSpeed * dt;
-			if (currentRadius >= orbitRadius) {
-				//position = orbitCenter + body_direction * currentRadius;
-				currentRadius = orbitRadius;
-				movementState = MovementState::Orbiting;
+
+			if (hits > 2.0f) {
+				if (currentRadius >= orbitRadius) {
+					currentRadius = orbitRadius;
+
+
+					movementState = MovementState::Orbiting;
+				}
+			}
+			if (hits > 1.0f) {
+				if (currentRadius >= orbitRadius2) {
+					currentRadius = orbitRadius2;
+
+
+					movementState = MovementState::Orbiting;
+				}
+			}
+			if (hits > 0.0f) {
+				if (currentRadius >= orbitRadius3) {
+					currentRadius = orbitRadius3;
+
+
+					movementState = MovementState::Orbiting;
+				}
 			}
 			break;
 
@@ -82,13 +112,21 @@ void Tank::Update(float dt)
 
 
 	radialDir = {
-		std::cos(orbitAngle.asRadians() + sf::degrees(90).asRadians()),
-		std::sin(orbitAngle.asRadians() + sf::degrees(90).asRadians())
+		std::cos(orbitAngle.asRadians()),
+		std::sin(orbitAngle.asRadians())
 	};
+
 	position = orbitCenter + radialDir * currentRadius;
+	
+	if (!hasInitialPrev)
+	{
+		prevPosition = position;
+		hasInitialPrev = true;
+	}
+
 
 	// Rotación tangente
-	bodyRotation = orbitAngle + sf::degrees(180);
+	bodyRotation = orbitAngle + sf::degrees(90);
 	// Apply new rotation to tank body and barrel.
 	body->setRotation(bodyRotation);
 	barrel->setRotation(bodyRotation);
@@ -96,7 +134,48 @@ void Tank::Update(float dt)
 	barrel->setPosition(position);
 }
 
+//ES PER A QUAN CHOQUEN ORBITANT (ES POT LLEVAR A POSTERIORI)
+void Tank::ApplyCollisionCorrection(const sf::Vector2f& correction)
+{
+	// 1) Mover la posición
+	position += correction;
+
+	// 2) Recalcular radio y ángulo de la órbita a partir de la nueva posición
+	sf::Vector2f toTank = position - orbitCenter;
+	float len2 = toTank.x * toTank.x + toTank.y * toTank.y;
+	float len = std::sqrt(len2);
+	if (len == 0.f)
+	{
+		// Evitar NaN: si por alguna razón quedó exactamente en el centro
+		len = 1.f;
+		toTank = { 1.f, 0.f };
+	}
+
+	currentRadius = len;
+	float angleRad = std::atan2(toTank.y, toTank.x);
+	orbitAngle = sf::radians(angleRad);
+
+	// 3) Actualizar rotación y sprites  // el offset que estés usando
+	bodyRotation = orbitAngle + sf::degrees(90);
+	body->setRotation(bodyRotation);
+	barrel->setRotation(bodyRotation);
+	body->setPosition(position);
+	barrel->setPosition(position);
+}
+
+
 const void Tank::Render(sf::RenderWindow &window) {
 		window.draw(*body);
 		window.draw(*barrel);
+
+
+			sf::CircleShape colliderShape;
+			colliderShape.setRadius(colliderRadius);
+			colliderShape.setOrigin({colliderRadius, colliderRadius});
+			colliderShape.setPosition(position);
+			colliderShape.setFillColor(sf::Color(255, 0, 0, 40)); // rojo transparente
+			colliderShape.setOutlineColor(sf::Color::Red);
+			colliderShape.setOutlineThickness(2.f);
+			window.draw(colliderShape);
+		
 }

@@ -7,6 +7,7 @@ public:
 	Game();
 
 	void LoadTextures();
+	void ResolveTankCollisions();
 	void HandleEvents(const std::optional<sf::Event> event);
 	void Update(float dt);
 	// Network update now gets a collection of tank messages for multiple tanks.
